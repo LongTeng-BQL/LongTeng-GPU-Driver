@@ -1,0 +1,35 @@
+## @file LongTengGopDriverUefi.inf
+#  The simple & naïve UEFI GOP driver for LongTeng-GPU project.
+#
+#  Copyright (c) 2024 LongTeng-BQL Team. All rights granted.<BR>
+#
+#  SPDX-License-Identifier: WTFPL
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = LongTengGopDriverUefi
+  MODULE_UNI_FILE                = LongTengGopDriverUefi.uni
+  FILE_GUID                      = 5edc9ead-0926-4f50-af09-28b6bfc89c23
+  MODULE_TYPE                    = UEFI_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = LongTengGopDriverEntry
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  LongTengGopPkg/LongTengGopPkg.dec
+
+[LibraryClasses]
+  UefiDriverEntryPoint
+  DebugLib
+
+[Protocols]
+  gEfiGraphicsOutputProtocolGuid
+
+[Sources]
+  LongTengGopDriverUefi.c
+
+[Pcd]
+

@@ -1,0 +1,20 @@
+## @file LongTengGopDriverUefi.dec
+#  The declarations required for LongTeng-GPU project.
+#
+#  Copyright (c) 2024 LongTeng-BQL Team. All rights granted.<BR>
+#
+#  SPDX-License-Identifier: WTFPL
+#
+##
+
+
+[Defines]
+  DEC_SPECIFICATION              = 0x00010005
+  PACKAGE_NAME                   = LongTengGopPkg
+  PACKAGE_UNI_FILE               = LongTengGopPkg.uni
+  PACKAGE_GUID                   = 08ab2744-21ba-4df5-96a9-2232d985db4f
+  PACKAGE_VERSION                = 0.01
+
+[Includes]
+  Include
+
