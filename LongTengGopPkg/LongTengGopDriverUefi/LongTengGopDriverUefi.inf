@@ -23,13 +23,18 @@
 
 [LibraryClasses]
   UefiDriverEntryPoint
+  UefiBootServicesTableLib
   DebugLib
+  UefiLib
 
 [Protocols]
-  gEfiGraphicsOutputProtocolGuid
+  gEfiGraphicsOutputProtocolGuid  # PRODUCES
+  gEfiPciIoProtocolGuid           # CONSUMES
 
 [Sources]
   LongTengGopDriverUefi.c
+  LongTengGopDriverName.c
+  LongTengGopDriverProtocol.c
 
 [Pcd]
-
+  gLongTengGopPkgTokenSpaceGuid.PcdLongTengBQLVendorID

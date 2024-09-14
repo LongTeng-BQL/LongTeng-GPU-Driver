@@ -18,3 +18,8 @@
 [Includes]
   Include
 
+[Guids]
+  gLongTengGopPkgTokenSpaceGuid = { 0xa3dc58e2, 0xf4d8, 0x48b9, { 0x8a, 0xdd, 0x21, 0x49, 0x3c, 0x64, 0xdb, 0x96 } }
+
+[PcdsFixedAtBuild]
+  gLongTengGopPkgTokenSpaceGuid.PcdLongTengBQLVendorID|0xf00d|UINT16|0x00001000   # Delicious Food!
