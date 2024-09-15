@@ -16,6 +16,9 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Protocol/PciIo.h>
 
+UINT64 OriginalPciAttributes; // FIXME: DO NOT USE GLOBAL VARIABLE!
+EFI_PCI_IO_PROTOCOL *PciIo;   // FIXME: DO NOT USE GLOBAL VARIABLE!
+
 EFI_STATUS
 EFIAPI
 LongTengGopDriverSupported (
@@ -57,8 +60,9 @@ CleanUp:
   if (!EFI_ERROR (Status)) {
     DEBUG_CODE_BEGIN();
     UINTN Seg=0, Bus=0, Device=0, Func=0;
-    // PciIo->GetLocation(PciIo, &Seg, &Bus, &Device, &Func); FIXME: PageFault!
-    DEBUG ((DEBUG_INFO,"Found LongTeng-GPU @ %x:%x:%x:%x\n", Seg, Bus, Device, Func));
+    DEBUG((DEBUG_INFO," PciIo->GetLocation:%p\n",PciIo->GetLocation));
+    //PciIo->GetLocation(PciIo, &Seg, &Bus, &Device, &Func);
+    DEBUG ((DEBUG_INFO,"Found LongTeng-GPU @ %p:%p:%p:%p\n", Seg, Bus, Device, Func));
     DEBUG_CODE_END();
   }
   gBS->CloseProtocol (
@@ -78,20 +82,134 @@ LongTengGopDriverStart (
   IN EFI_DEVICE_PATH_PROTOCOL               *RemainingDevicePath OPTIONAL
 )
 {
-  DEBUG((DEBUG_INFO,"%a entry\n",__func__));
-  return EFI_SUCCESS;
+  EFI_STATUS Status = gBS->OpenProtocol (
+    ControllerHandle,
+    &gEfiPciIoProtocolGuid,
+    (VOID **)&PciIo,
+    This->DriverBindingHandle,
+    ControllerHandle,
+    EFI_OPEN_PROTOCOL_BY_DRIVER
+  );
+  if (EFI_ERROR (Status)) {
+    DEBUG((DEBUG_ERROR,"Cannot open PCI Protocol:%r\n",Status));
+    return Status;
+  }
+
+  Status = PciIo->Attributes (
+    PciIo,
+    EfiPciIoAttributeOperationGet,
+    0,
+    &OriginalPciAttributes
+  );
+  if (EFI_ERROR (Status)) {
+    DEBUG((DEBUG_ERROR,"Cannot read default attributes:%r\n",Status));
+    return Status;
+  }
+
+  UINT64 PciSupports;
+  Status = PciIo->Attributes (
+    PciIo,
+    EfiPciIoAttributeOperationSupported,
+    0,
+    &PciSupports
+  );
+  if (EFI_ERROR (Status)) {
+    DEBUG((DEBUG_ERROR,"Cannot read supported attributes:%r\n",Status));
+    return Status;
+  }
+
+  Status = PciIo->Attributes (
+    PciIo,
+    EfiPciIoAttributeOperationEnable,
+    (PciSupports & EFI_PCI_DEVICE_ENABLE) |
+    EFI_PCI_IO_ATTRIBUTE_DUAL_ADDRESS_CYCLE,
+    NULL
+  );
+  DEBUG_CODE_BEGIN();
+  if (EFI_ERROR (Status)) {
+    DEBUG((DEBUG_ERROR,"Cannot set supported attributes:%r\n",Status));
+  }
+  // Test memory access.
+  UINT64 TestValue = 0xDEADBEEFCAFEBABE;
+    PciIo->Mem.Write (
+    PciIo,
+    EfiPciIoWidthUint64,
+    0,
+    0x20,
+    1,
+    &TestValue
+  );
+  if (EFI_ERROR (Status)) {
+    DEBUG((DEBUG_ERROR,"Cannot perform DMA write:%r\n",Status));
+    return Status;
+  }
+  PciIo->Mem.Read (
+    PciIo,
+    EfiPciIoWidthUint64,
+    0,
+    0x20,
+    1,
+    &TestValue
+  );
+  if (EFI_ERROR (Status)) {
+    DEBUG((DEBUG_ERROR,"Cannot perform DMA write:%r\n",Status));
+    return Status;
+  }
+  if (TestValue != 0xDEADBEEFCAFEBABE) {
+    DEBUG((DEBUG_ERROR," Write-read value does not match or BAR0:%llx\n",TestValue));
+  }
+
+  TestValue = 0xDEADBEEFCAFEBABE;
+  PciIo->Mem.Write (
+    PciIo,
+    EfiPciIoWidthUint64,
+    1,
+    0x20,
+    1,
+    &TestValue
+  );
+  if (EFI_ERROR (Status)) {
+    DEBUG((DEBUG_ERROR,"Cannot perform DMA write:%r\n",Status));
+    return Status;
+  }
+  PciIo->Mem.Read (
+    PciIo,
+    EfiPciIoWidthUint64,
+    1,
+    0x20,
+    1,
+    &TestValue
+  );
+  if (EFI_ERROR (Status)) {
+    DEBUG((DEBUG_ERROR,"Cannot perform DMA write:%r\n",Status));
+    return Status;
+  }
+  if (TestValue != 0xDEADBEEFCAFEBABE) {
+    DEBUG((DEBUG_ERROR," Write-read value does not match or BAR1:%llx\n",TestValue));
+  }
+  DEBUG_CODE_END();
+
+  return Status;
 }
 
 EFI_STATUS
 EFIAPI
 LongTengGopDriverStop (
   IN  EFI_DRIVER_BINDING_PROTOCOL  *This,
-  IN  EFI_HANDLE                   Handle,
+  IN  EFI_HANDLE                   ControllerHandle,
   IN  UINTN                        NumberOfChildren,
   IN  EFI_HANDLE                   *ChildHandleBuffer
 )
 {
   DEBUG((DEBUG_INFO,"%a entry\n",__func__));
+
+  // TODO: Recover original attribute.
+  gBS->CloseProtocol (
+    ControllerHandle,
+    &gEfiPciIoProtocolGuid,
+    This->DriverBindingHandle,
+    ControllerHandle
+  );
   return EFI_SUCCESS;
 }
 
