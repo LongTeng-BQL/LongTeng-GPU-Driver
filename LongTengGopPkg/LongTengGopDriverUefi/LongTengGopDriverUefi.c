@@ -57,14 +57,6 @@ LongTengGopDriverSupported (
   }
 
 CleanUp:
-  if (!EFI_ERROR (Status)) {
-    DEBUG_CODE_BEGIN();
-    UINTN Seg=0, Bus=0, Device=0, Func=0;
-    DEBUG((DEBUG_INFO," PciIo->GetLocation:%p\n",PciIo->GetLocation));
-    //PciIo->GetLocation(PciIo, &Seg, &Bus, &Device, &Func);
-    DEBUG ((DEBUG_INFO,"Found LongTeng-GPU @ %p:%p:%p:%p\n", Seg, Bus, Device, Func));
-    DEBUG_CODE_END();
-  }
   gBS->CloseProtocol (
     ControllerHandle,
     &gEfiPciIoProtocolGuid,
@@ -94,6 +86,15 @@ LongTengGopDriverStart (
     DEBUG((DEBUG_ERROR,"Cannot open PCI Protocol:%r\n",Status));
     return Status;
   }
+  DEBUG_CODE_BEGIN();
+  UINTN Seg=0, Bus=0, Device=0, Func=0;
+  Status = PciIo->GetLocation(PciIo, &Seg, &Bus, &Device, &Func);
+  if (EFI_ERROR (Status)) {
+    DEBUG((DEBUG_ERROR,"Cannot get PCI SS:BB:DD:FF :%r\n",Status));
+    return Status;
+  }
+  DEBUG ((DEBUG_INFO,"Starting LongTeng-GPU @ %p:%p:%p:%p\n", Seg, Bus, Device, Func));
+  DEBUG_CODE_END();
 
   Status = PciIo->Attributes (
     PciIo,
@@ -152,40 +153,11 @@ LongTengGopDriverStart (
     &TestValue
   );
   if (EFI_ERROR (Status)) {
-    DEBUG((DEBUG_ERROR,"Cannot perform DMA write:%r\n",Status));
+    DEBUG((DEBUG_ERROR,"Cannot perform DMA read:%r\n",Status));
     return Status;
   }
   if (TestValue != 0xDEADBEEFCAFEBABE) {
     DEBUG((DEBUG_ERROR," Write-read value does not match or BAR0:%llx\n",TestValue));
-  }
-
-  TestValue = 0xDEADBEEFCAFEBABE;
-  PciIo->Mem.Write (
-    PciIo,
-    EfiPciIoWidthUint64,
-    1,
-    0x20,
-    1,
-    &TestValue
-  );
-  if (EFI_ERROR (Status)) {
-    DEBUG((DEBUG_ERROR,"Cannot perform DMA write:%r\n",Status));
-    return Status;
-  }
-  PciIo->Mem.Read (
-    PciIo,
-    EfiPciIoWidthUint64,
-    1,
-    0x20,
-    1,
-    &TestValue
-  );
-  if (EFI_ERROR (Status)) {
-    DEBUG((DEBUG_ERROR,"Cannot perform DMA write:%r\n",Status));
-    return Status;
-  }
-  if (TestValue != 0xDEADBEEFCAFEBABE) {
-    DEBUG((DEBUG_ERROR," Write-read value does not match or BAR1:%llx\n",TestValue));
   }
   DEBUG_CODE_END();
 
